@@ -22,7 +22,7 @@ export default function AuthModal({ onClose, onAuth }: Props) {
     const { error: err } = await supabase.auth.signInWithOtp({
       email: email.toLowerCase().trim(),
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/auth/callback/`,
         shouldCreateUser: true,
       },
     });
