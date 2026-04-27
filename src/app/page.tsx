@@ -1,24 +1,32 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
-import Actualites from "@/components/Actualites";
+import APropos from "@/components/APropos";
+import Equipe from "@/components/Equipe";
+import GPS from "@/components/GPS";
 import Etapes from "@/components/Etapes";
-import Equipage from "@/components/Equipage";
-import SuiviGPS from "@/components/SuiviGPS";
 import AdopterKm from "@/components/AdopterKm";
+import Supporters from "@/components/Supporters";
+import Sponsors from "@/components/Sponsors";
+import Galerie from "@/components/Galerie";
+import InstagramSection from "@/components/Instagram";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 
-export default function HomePage() {
+export default function Home() {
   return (
     <>
       <Navbar />
       <main>
         <Hero />
-        <Actualites />
+        <APropos />
+        <Equipe />
+        <GPS />
         <Etapes />
-        <Equipage />
-        <SuiviGPS />
         <AdopterKm />
+        <Supporters />
+        <Sponsors />
+        <Galerie />
+        <InstagramSection />
         <Contact />
       </main>
       <Footer />

@@ -1,129 +1,80 @@
 "use client";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { Mail, AtSign, Send, AlertCircle, CheckCircle } from "lucide-react";
-
-const TYPES = [
-  { value: "question", label: "Question générale" },
-  { value: "remboursement", label: "Remboursement" },
-  { value: "changement_km", label: "Changement de km" },
-  { value: "changement_sponsor", label: "Changement sponsor" },
-  { value: "autre", label: "Autre" },
-];
-const MAX_CHARS = 500;
+import { Send, CheckCircle, Mail } from "lucide-react";
 
 export default function Contact() {
-  const [form, setForm] = useState({ name: "", email: "", type: "question", subject: "", message: "" });
-  const [sending, setSending] = useState(false);
+  const [form, setForm] = useState({ nom: '', email: '', sujet: '', message: '' });
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name || !form.email || !form.message) return;
-    setSending(true); setError("");
+    setLoading(true);
     const supabase = createClient();
-    const { error: err } = await supabase.from("tickets").insert({
-      user_name: form.name,
+    await supabase.from("tickets").insert({
+      user_name: form.nom,
       user_email: form.email,
-      type: form.type as "question",
-      subject: form.subject || form.type,
+      subject: form.sujet,
       message: form.message,
-      status: "ouvert",
+      type: 'question',
+      status: 'ouvert',
     });
-    setSending(false);
-    if (err) { setError("Erreur lors de l'envoi. Réessayez."); return; }
     setSent(true);
-    setForm({ name: "", email: "", type: "question", subject: "", message: "" });
+    setLoading(false);
   }
 
   return (
-    <section id="contact" className="py-24 px-8" style={{ background: 'var(--night2)' }}>
-      <div className="max-w-6xl mx-auto">
-        <div className="section-tag">Nous rejoindre</div>
-        <h2 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 'clamp(32px,5vw,56px)', letterSpacing: '2px', color: 'var(--sand)', marginBottom: 8 }}>
-          Contact
-        </h2>
-        <p className="mb-12 text-sm" style={{ color: 'var(--muted)' }}>Une question ? Un problème ? Écrivez-nous.</p>
+    <section id="contact" style={{ padding: 'clamp(60px, 8vw, 100px) 24px' }}>
+      <div style={{ maxWidth: 800, margin: '0 auto' }}>
+        <div className="section-label">Nous écrire</div>
+        <h2 className="title" style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', marginBottom: 16 }}>CONTACT</h2>
+        <p style={{ color: 'var(--muted)', marginBottom: 48 }}>
+          Une question, une proposition de partenariat, ou juste envie de nous encourager ? On vous répond rapidement.
+        </p>
 
-        <div className="grid lg:grid-cols-2 gap-12">
-          {/* Info */}
-          <div className="space-y-6">
-            <div className="card rounded-xl p-6 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(196,98,45,.15)' }}>
-                <Mail size={20} style={{ color: 'var(--terra)' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 40 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <a href="mailto:gabin.ranson76@gmail.com" className="card" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none' }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(240,165,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Mail size={20} style={{ color: 'var(--amber)' }} />
               </div>
               <div>
-                <div className="text-xs uppercase tracking-widest mb-1" style={{ color: 'var(--muted)' }}>Email</div>
-                <a href="mailto:4lhavraid@gmail.com" style={{ color: 'var(--text)', textDecoration: 'none' }}>4lhavraid@gmail.com</a>
+                <div style={{ fontSize: '0.7rem', letterSpacing: 2, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 2 }}>Email</div>
+                <div style={{ color: 'var(--sand)', fontSize: '0.9rem' }}>gabin.ranson76@gmail.com</div>
               </div>
-            </div>
-            <div className="card rounded-xl p-6 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(196,98,45,.15)' }}>
-                <AtSign size={20} style={{ color: 'var(--terra)' }} />
+            </a>
+
+            <a href="https://www.instagram.com/4lhavraid/" target="_blank" rel="noopener" className="card" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none' }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(240,165,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: 'serif', fontWeight: 700, color: 'var(--amber)', fontSize: '1.1rem' }}>
+                in
               </div>
               <div>
-                <div className="text-xs uppercase tracking-widest mb-1" style={{ color: 'var(--muted)' }}>Instagram</div>
-                <a href="https://instagram.com/4lhavraid" target="_blank" rel="noreferrer" style={{ color: 'var(--text)', textDecoration: 'none' }}>@4lhavraid</a>
+                <div style={{ fontSize: '0.7rem', letterSpacing: 2, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 2 }}>Instagram</div>
+                <div style={{ color: 'var(--sand)', fontSize: '0.9rem' }}>@4lhavraid</div>
               </div>
-            </div>
-            <div className="card rounded-xl p-6">
-              <p className="text-sm font-semibold mb-2" style={{ color: 'var(--sand)' }}>4L HAVRAID</p>
-              <p className="text-xs" style={{ color: 'var(--muted)' }}>SIREN : 103 219 689</p>
-              <p className="text-xs" style={{ color: 'var(--muted)' }}>SIRET : 103 219 689 00017</p>
-              <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>Réponse sous 48h</p>
-            </div>
+            </a>
           </div>
 
-          {/* Form */}
-          <div className="card rounded-xl p-8">
-            <h3 className="text-lg font-semibold mb-6" style={{ color: 'var(--sand)' }}>Envoyer un message</h3>
-            {sent ? (
-              <div className="text-center py-8">
-                <CheckCircle size={48} className="mx-auto mb-4" style={{ color: 'var(--green-light)' }} />
-                <p style={{ color: 'var(--green-light)' }}>Message envoyé !</p>
-                <p className="text-sm mt-2" style={{ color: 'var(--muted)' }}>On vous répond sous 48h.</p>
-                <button onClick={() => setSent(false)} className="mt-4 text-sm underline" style={{ color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                  Envoyer un autre message
-                </button>
+          {sent ? (
+            <div className="card" style={{ padding: '40px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
+              <CheckCircle size={44} style={{ color: 'var(--green)' }} />
+              <p style={{ color: 'var(--sand)', fontWeight: 600, fontSize: '1.1rem' }}>Message envoyé !</p>
+              <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>On vous répond sous 48h.</p>
+            </div>
+          ) : (
+            <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <input value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} placeholder="Votre nom" required />
+                <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="Email" required />
               </div>
-            ) : (
-              <form onSubmit={submit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>Prénom Nom *</label>
-                    <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Prénom Nom" required />
-                  </div>
-                  <div>
-                    <label className="block text-xs uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>Email *</label>
-                    <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="votre@email.com" required />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>Type de demande</label>
-                  <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
-                    {TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs uppercase tracking-widest mb-2" style={{ color: 'var(--muted)' }}>Message * ({form.message.length}/{MAX_CHARS})</label>
-                  <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value.slice(0, MAX_CHARS) }))}
-                    rows={5} placeholder="Décrivez votre demande..." required style={{ resize: 'vertical' }} />
-                  <div className="text-right text-xs mt-1" style={{ color: form.message.length > MAX_CHARS * 0.9 ? 'var(--accent)' : 'var(--muted)' }}>
-                    {MAX_CHARS - form.message.length} caractères restants
-                  </div>
-                </div>
-                {error && (
-                  <div className="flex items-center gap-2 text-sm" style={{ color: '#f85149' }}>
-                    <AlertCircle size={16} /> {error}
-                  </div>
-                )}
-                <button type="submit" disabled={sending} className="btn-primary w-full justify-center">
-                  <Send size={16} /> {sending ? "Envoi..." : "Envoyer"}
-                </button>
-              </form>
-            )}
-          </div>
+              <input value={form.sujet} onChange={e => setForm(f => ({ ...f, sujet: e.target.value }))} placeholder="Sujet" required />
+              <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} placeholder="Votre message..." rows={5} required />
+              <button type="submit" disabled={loading} className="btn btn-amber" style={{ justifyContent: 'center' }}>
+                <Send size={16} /> {loading ? 'Envoi...' : 'Envoyer le message'}
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </section>
