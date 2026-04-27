@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+:root {
+  --sand: #F5ECD7;
+  --terra: #C4622D;
+  --terra-dark: #9B4A1F;
+  --green: #2D6A4F;
+  --green-light: #52B788;
+  --night: #0D1117;
+  --night2: #161B22;
+  --night3: #21262D;
+  --muted: #8B949E;
+  --text: #E6EDF3;
+  --text-dim: #C9D1D9;
+  --accent: #F0A500;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--night);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 300;
+  overflow-x: hidden;
+}
