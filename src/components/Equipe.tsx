@@ -3,17 +3,15 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const MEMBRES = [
   {
     nom: "Gabin Ranson",
-    role: "Pilote & Co-fondateur",
+    role: "Pilote & Trésorier",
     photo: `${BASE}/gabin.jpg`,
-    bio: "Étudiant normand passionné d'aventure et de mécanique. C'est lui qui tient le volant quand ça se corse.",
-    instagram: "https://www.instagram.com/4lhavraid/",
+    bio: "Passionné de mécanique et d'aventure, Gabin tient le volant de notre 4L du Havre jusqu'au désert marocain.",
   },
   {
     nom: "Jules Marchand",
-    role: "Co-pilote & Co-fondateur",
+    role: "Co-pilote & Président",
     photo: `${BASE}/jules.jpg`,
-    bio: "Le navigateur de l'équipe. Toujours de bonne humeur, même quand la 4L refuse de démarrer à 6h du matin.",
-    instagram: "https://www.instagram.com/4lhavraid/",
+    bio: "Co-pilote et Président de l'association, Jules assure la partie mécanique et la bonne humeur de l'équipe. Son expertise technique est un atout précieux pour mener la 4L jusqu'à Marrakech.",
   },
 ];
 
@@ -30,8 +28,8 @@ export default function Equipe() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
           {MEMBRES.map(m => (
             <div key={m.nom} className="card" style={{ overflow: 'hidden' }}>
-              <div style={{ height: 280, overflow: 'hidden', position: 'relative' }}>
-                <img src={m.photo} alt={m.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+              <div style={{ height: 360, overflow: 'hidden', position: 'relative' }}>
+                <img src={m.photo} alt={m.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,10,10,0.8) 0%, transparent 50%)' }} />
               </div>
               <div style={{ padding: '24px' }}>

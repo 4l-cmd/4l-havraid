@@ -31,7 +31,7 @@ export default function AdopterKm() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 40, alignItems: 'start' }}>
           <div>
             <p style={{ color: 'var(--muted)', lineHeight: 1.8, marginBottom: 24 }}>
-              Pour <strong style={{ color: 'var(--amber)' }}>5€</strong>, adoptez un kilomètre de notre parcours et devenez une partie de l'aventure. Votre prénom s'affichera sur notre mur de supporters !
+              Adoptez un kilomètre de notre parcours et devenez une partie de l'aventure. Vous choisissez librement le montant de votre soutien. Votre prénom s'affichera sur notre mur de supporters !
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
@@ -47,7 +47,7 @@ export default function AdopterKm() {
                 Le paiement se fait via HelloAsso, plateforme sécurisée pour les associations françaises.
               </p>
               <a href="#" className="btn btn-amber" style={{ justifyContent: 'center', width: '100%', opacity: 0.5, cursor: 'not-allowed' }}>
-                <Heart size={16} /> Adopter un km · 5€ — Bientôt disponible
+                <Heart size={16} /> Adopter un km — Bientôt disponible
               </a>
               <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 8, textAlign: 'center' }}>
                 Lien disponible dès l'ouverture de notre HelloAsso

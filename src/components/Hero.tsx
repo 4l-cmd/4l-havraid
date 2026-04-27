@@ -67,7 +67,7 @@ export default function Hero() {
 
       {/* CTAs */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-        <a href="#adopter" className="btn btn-amber">Adopter un kilomètre · 5€</a>
+        <a href="#adopter" className="btn btn-amber">Adopter un kilomètre</a>
         <a href="#apropos" className="btn btn-outline">Découvrir notre aventure</a>
       </div>
 

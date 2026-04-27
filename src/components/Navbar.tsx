@@ -6,7 +6,6 @@ const LINKS = [
   { href: "#apropos", label: "Notre histoire" },
   { href: "#equipe", label: "Équipe" },
   { href: "#gps", label: "GPS Live" },
-  { href: "#etapes", label: "Étapes" },
   { href: "#sponsors", label: "Sponsors" },
   { href: "#galerie", label: "Galerie" },
   { href: "#contact", label: "Contact" },
@@ -38,7 +37,7 @@ export default function Navbar() {
             </a>
           ))}
           <a href="#adopter" className="btn btn-amber" style={{ padding: '10px 22px', fontSize: '0.85rem' }}>
-            Adopter un km
+            Nous soutenir
           </a>
         </div>
         <button onClick={() => setOpen(!open)} className="md:hidden" style={{ background: 'none', border: 'none', color: 'var(--sand)', cursor: 'pointer' }}>
