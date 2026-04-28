@@ -141,21 +141,24 @@ export default function TrackerPage() {
           </h1>
           <p style={{ color: 'var(--muted)', marginBottom: 32 }}>Mode suivi GPS — Pilotes uniquement</p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <form onSubmit={e => { e.preventDefault(); unlock(); }} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <input
-              type="password"
+              type="text"
+              inputMode="text"
               value={code}
               onChange={e => setCode(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && unlock()}
               placeholder="Code d'accès"
-              style={{ textAlign: 'center', background: codeError ? 'rgba(255,80,80,0.08)' : undefined, borderColor: codeError ? 'rgba(255,80,80,0.4)' : undefined }}
-              autoFocus
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              style={{ textAlign: 'center', background: codeError ? 'rgba(255,80,80,0.08)' : undefined, borderColor: codeError ? 'rgba(255,80,80,0.4)' : undefined, letterSpacing: 3 }}
             />
-            {codeError && <p style={{ color: '#ff5050', fontSize: '0.85rem' }}>Code incorrect</p>}
-            <button onClick={unlock} className="btn btn-amber" style={{ justifyContent: 'center' }}>
+            {codeError && <p style={{ color: '#ff5050', fontSize: '0.85rem' }}>Code incorrect — vérifiez la saisie</p>}
+            <button type="submit" className="btn btn-amber" style={{ justifyContent: 'center' }}>
               Accéder au tracker
             </button>
-          </div>
+          </form>
         </div>
       </div>
     );
