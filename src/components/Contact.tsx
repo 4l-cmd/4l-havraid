@@ -35,13 +35,13 @@ export default function Contact() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 40 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <a href="mailto:gabin.ranson76@gmail.com" className="card" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none' }}>
+            <a href="mailto:4lhavraid@gmail.com" className="card" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none' }}>
               <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(240,165,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Mail size={20} style={{ color: 'var(--amber)' }} />
               </div>
               <div>
                 <div style={{ fontSize: '0.7rem', letterSpacing: 2, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 2 }}>Email</div>
-                <div style={{ color: 'var(--sand)', fontSize: '0.9rem' }}>gabin.ranson76@gmail.com</div>
+                <div style={{ color: 'var(--sand)', fontSize: '0.9rem' }}>4lhavraid@gmail.com</div>
               </div>
             </a>
 
