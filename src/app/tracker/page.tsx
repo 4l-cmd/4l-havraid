@@ -1,19 +1,13 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase";
-import { Navigation, Wifi, WifiOff, Play, Square, MapPin, AlertCircle, CheckCircle } from "lucide-react";
-
-const SECRET = "havraid2026"; // code d'accès simple
+import { Navigation, Wifi, WifiOff, Play, Square, MapPin, AlertCircle, CheckCircle, Send } from "lucide-react";
 
 export default function TrackerPage() {
-  const [unlocked, setUnlocked] = useState(false);
-  const [code, setCode] = useState("");
-  const [codeError, setCodeError] = useState(false);
-
   const [tracking, setTracking] = useState(false);
   const [status, setStatus] = useState<"idle" | "gps_wait" | "sending" | "ok" | "error">("idle");
-  const [lastSent, setLastSent] = useState<Date | null>(null);
-  const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [lastSent, setLastSent] = useState<string>("");
+  const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number; acc?: number } | null>(null);
   const [kmParcourus, setKmParcourus] = useState("");
   const [label, setLabel] = useState("");
   const [sendCount, setSendCount] = useState(0);
@@ -24,17 +18,14 @@ export default function TrackerPage() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pendingPosRef = useRef<{ lat: number; lng: number } | null>(null);
+  const kmRef = useRef("");
+  const labelRef = useRef("");
 
   const INTERVAL_SECONDS = 60;
 
-  function unlock() {
-    if (code.toLowerCase().trim() === SECRET) {
-      setUnlocked(true);
-    } else {
-      setCodeError(true);
-      setTimeout(() => setCodeError(false), 2000);
-    }
-  }
+  // Keep refs in sync so interval callback always has latest values
+  useEffect(() => { kmRef.current = kmParcourus; }, [kmParcourus]);
+  useEffect(() => { labelRef.current = label; }, [label]);
 
   async function sendPosition(lat: number, lng: number) {
     setStatus("sending");
@@ -43,23 +34,24 @@ export default function TrackerPage() {
       const { error } = await supabase.from("gps_positions").insert({
         lat,
         lng,
-        label: label || null,
-        km_parcourus: kmParcourus ? parseFloat(kmParcourus) : null,
+        label: labelRef.current || null,
+        km_parcourus: kmRef.current ? parseFloat(kmRef.current) : null,
       });
       if (error) throw error;
-      setLastSent(new Date());
+      const now = new Date().toLocaleTimeString("fr-FR");
+      setLastSent(now);
       setSendCount(c => c + 1);
       setStatus("ok");
       setTimeout(() => setStatus("idle"), 3000);
     } catch (err: any) {
-      setErrorMsg(err.message ?? "Erreur d'envoi");
+      setErrorMsg(err?.message ?? "Erreur réseau");
       setStatus("error");
-      setTimeout(() => setStatus("idle"), 5000);
+      setTimeout(() => { setStatus("idle"); setErrorMsg(""); }, 6000);
     }
   }
 
   function startTracking() {
-    if (!navigator.geolocation) {
+    if (!("geolocation" in navigator)) {
       setErrorMsg("GPS non disponible sur cet appareil");
       setStatus("error");
       return;
@@ -69,48 +61,45 @@ export default function TrackerPage() {
     setStatus("gps_wait");
     setNextSendIn(INTERVAL_SECONDS);
 
-    // Watch GPS position
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        setCurrentPos({ lat, lng });
+        const { latitude: lat, longitude: lng, accuracy: acc } = pos.coords;
+        setCurrentPos({ lat, lng, acc });
         pendingPosRef.current = { lat, lng };
       },
       (err) => {
-        setErrorMsg("Impossible d'obtenir le GPS : " + err.message);
+        setErrorMsg("GPS : " + err.message);
         setStatus("error");
       },
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 30000 }
+      { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 }
     );
 
-    // Send immediately, then every INTERVAL_SECONDS
-    const doSend = () => {
-      const pos = pendingPosRef.current;
-      if (pos) {
-        sendPosition(pos.lat, pos.lng);
+    // Send first time after 8s, then every INTERVAL_SECONDS
+    const firstTimer = setTimeout(() => {
+      if (pendingPosRef.current) {
+        sendPosition(pendingPosRef.current.lat, pendingPosRef.current.lng);
         setNextSendIn(INTERVAL_SECONDS);
       }
-    };
+    }, 8000);
 
-    // First send after 5s (let GPS stabilize)
-    setTimeout(() => {
-      if (pendingPosRef.current) doSend();
-    }, 5000);
+    intervalRef.current = setInterval(() => {
+      if (pendingPosRef.current) {
+        sendPosition(pendingPosRef.current.lat, pendingPosRef.current.lng);
+        setNextSendIn(INTERVAL_SECONDS);
+      }
+    }, INTERVAL_SECONDS * 1000);
 
-    intervalRef.current = setInterval(doSend, INTERVAL_SECONDS * 1000);
-
-    // Countdown timer
     countdownRef.current = setInterval(() => {
-      setNextSendIn(n => {
-        if (n <= 1) return INTERVAL_SECONDS;
-        return n - 1;
-      });
+      setNextSendIn(n => (n <= 1 ? INTERVAL_SECONDS : n - 1));
     }, 1000);
+
+    return () => clearTimeout(firstTimer);
   }
 
   function stopTracking() {
     setTracking(false);
     setStatus("idle");
+    setNextSendIn(0);
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
@@ -118,183 +107,184 @@ export default function TrackerPage() {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
     pendingPosRef.current = null;
-    setNextSendIn(0);
   }
 
-  async function sendNow() {
+  function sendNow() {
     const pos = pendingPosRef.current ?? currentPos;
     if (!pos) { setErrorMsg("GPS pas encore disponible"); setStatus("error"); return; }
     setNextSendIn(INTERVAL_SECONDS);
-    await sendPosition(pos.lat, pos.lng);
+    sendPosition(pos.lat, pos.lng);
   }
 
-  useEffect(() => () => stopTracking(), []);
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
 
-  // ---- LOGIN SCREEN ----
-  if (!unlocked) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0A0A0A', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <div style={{ maxWidth: 400, width: '100%', textAlign: 'center' }}>
-          <Navigation size={48} style={{ color: 'var(--amber)', margin: '0 auto 24px' }} />
-          <h1 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: '2.5rem', letterSpacing: 4, color: 'var(--sand)', marginBottom: 8 }}>
-            4L HAVRAID
-          </h1>
-          <p style={{ color: 'var(--muted)', marginBottom: 32 }}>Mode suivi GPS — Pilotes uniquement</p>
+  const amber = "#F0A500";
+  const sand = "#E8DCC8";
+  const muted = "#888880";
+  const night = "#0A0A0A";
+  const card = "#141414";
+  const border = "#1E1E1E";
 
-          <form onSubmit={e => { e.preventDefault(); unlock(); }} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <input
-              type="text"
-              inputMode="text"
-              value={code}
-              onChange={e => setCode(e.target.value)}
-              placeholder="Code d'accès"
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              style={{ textAlign: 'center', background: codeError ? 'rgba(255,80,80,0.08)' : undefined, borderColor: codeError ? 'rgba(255,80,80,0.4)' : undefined, letterSpacing: 3 }}
-            />
-            {codeError && <p style={{ color: '#ff5050', fontSize: '0.85rem' }}>Code incorrect — vérifiez la saisie</p>}
-            <button type="submit" className="btn btn-amber" style={{ justifyContent: 'center' }}>
-              Accéder au tracker
-            </button>
-          </form>
+  return (
+    <div style={{ minHeight: "100vh", background: night, color: sand, fontFamily: "Outfit, system-ui, sans-serif", padding: "0 0 60px" }}>
+
+      {/* Header */}
+      <div style={{ background: card, borderBottom: `1px solid ${border}`, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Navigation size={22} style={{ color: amber }} />
+          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.4rem", letterSpacing: 3, color: sand }}>
+            4L HAVRAID · TRACKER
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {tracking
+            ? <><Wifi size={18} style={{ color: "#4CAF50" }} /><span style={{ fontSize: "0.75rem", color: "#4CAF50", fontWeight: 700 }}>EN LIGNE</span></>
+            : <><WifiOff size={18} style={{ color: muted }} /><span style={{ fontSize: "0.75rem", color: muted }}>HORS LIGNE</span></>
+          }
         </div>
       </div>
-    );
-  }
 
-  // ---- TRACKER SCREEN ----
-  return (
-    <div style={{ minHeight: '100vh', background: '#0A0A0A', padding: '32px 20px', fontFamily: 'Outfit, sans-serif' }}>
-      <div style={{ maxWidth: 480, margin: '0 auto' }}>
+      <div style={{ maxWidth: 500, margin: "0 auto", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
-          <Navigation size={28} style={{ color: 'var(--amber)' }} />
-          <div>
-            <h1 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: '1.8rem', letterSpacing: 3, color: 'var(--sand)', lineHeight: 1 }}>
-              TRACKER GPS
-            </h1>
-            <p style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>4L Havraid · Le Havre → Marrakech</p>
-          </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {tracking ? (
-              <Wifi size={20} style={{ color: '#4CAF50' }} />
-            ) : (
-              <WifiOff size={20} style={{ color: 'var(--muted)' }} />
+        {/* GPS card */}
+        <div style={{ background: card, border: `1px solid ${currentPos ? "rgba(240,165,0,0.25)" : border}`, borderRadius: 12, padding: "18px 20px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <MapPin size={15} style={{ color: amber }} />
+            <span style={{ fontSize: "0.7rem", letterSpacing: 2, textTransform: "uppercase", color: muted }}>Signal GPS</span>
+            {currentPos?.acc && (
+              <span style={{ marginLeft: "auto", fontSize: "0.7rem", color: currentPos.acc < 20 ? "#4CAF50" : currentPos.acc < 50 ? amber : "#ff8080" }}>
+                ±{Math.round(currentPos.acc)}m
+              </span>
             )}
-            <span style={{ fontSize: '0.75rem', color: tracking ? '#4CAF50' : 'var(--muted)', fontWeight: 600 }}>
-              {tracking ? "EN LIGNE" : "HORS LIGNE"}
-            </span>
-          </div>
-        </div>
-
-        {/* Current position */}
-        <div className="card" style={{ padding: '20px 24px', marginBottom: 16, background: currentPos ? 'rgba(240,165,0,0.04)' : undefined, borderColor: currentPos ? 'rgba(240,165,0,0.2)' : undefined }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <MapPin size={16} style={{ color: 'var(--amber)' }} />
-            <span style={{ fontSize: '0.75rem', letterSpacing: 2, textTransform: 'uppercase', color: 'var(--muted)' }}>Position GPS</span>
           </div>
           {currentPos ? (
-            <div style={{ display: 'flex', gap: 16 }}>
+            <div style={{ display: "flex", gap: 20 }}>
               <div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--muted)', marginBottom: 2 }}>Latitude</div>
-                <div style={{ color: 'var(--sand)', fontWeight: 600, fontFamily: 'monospace' }}>{currentPos.lat.toFixed(5)}</div>
+                <div style={{ fontSize: "0.65rem", color: muted, marginBottom: 2 }}>Latitude</div>
+                <div style={{ color: sand, fontWeight: 600, fontFamily: "monospace", fontSize: "0.95rem" }}>{currentPos.lat.toFixed(5)}</div>
               </div>
               <div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--muted)', marginBottom: 2 }}>Longitude</div>
-                <div style={{ color: 'var(--sand)', fontWeight: 600, fontFamily: 'monospace' }}>{currentPos.lng.toFixed(5)}</div>
+                <div style={{ fontSize: "0.65rem", color: muted, marginBottom: 2 }}>Longitude</div>
+                <div style={{ color: sand, fontWeight: 600, fontFamily: "monospace", fontSize: "0.95rem" }}>{currentPos.lng.toFixed(5)}</div>
               </div>
             </div>
           ) : (
-            <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
-              {tracking ? "⌛ Acquisition du signal GPS..." : "Démarrez le suivi pour obtenir la position"}
+            <p style={{ color: muted, fontSize: "0.9rem" }}>
+              {tracking ? "⌛ Acquisition du signal GPS..." : "Appuyez sur Démarrer pour activer le GPS"}
             </p>
           )}
         </div>
 
-        {/* Manual info */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+        {/* Inputs */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', letterSpacing: 2, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>
-              Km parcourus (à mettre à jour)
+            <label style={{ display: "block", fontSize: "0.7rem", letterSpacing: 2, textTransform: "uppercase", color: muted, marginBottom: 6 }}>
+              Km parcourus
             </label>
             <input
               type="number"
+              inputMode="numeric"
               value={kmParcourus}
               onChange={e => setKmParcourus(e.target.value)}
               placeholder="ex: 342"
-              style={{ fontSize: '1.2rem' }}
+              style={{ background: card, border: `1px solid ${border}`, borderRadius: 8, color: sand, padding: "12px 14px", width: "100%", fontSize: "1.1rem", outline: "none", boxSizing: "border-box" }}
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', letterSpacing: 2, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>
-              Lieu / Description (optionnel)
+            <label style={{ display: "block", fontSize: "0.7rem", letterSpacing: 2, textTransform: "uppercase", color: muted, marginBottom: 6 }}>
+              Lieu (optionnel)
             </label>
             <input
               type="text"
               value={label}
               onChange={e => setLabel(e.target.value)}
-              placeholder="ex: Bivouac dans le désert, Fès..."
+              placeholder="Fès, bivouac désert..."
+              autoCorrect="off"
+              style={{ background: card, border: `1px solid ${border}`, borderRadius: 8, color: sand, padding: "12px 14px", width: "100%", fontSize: "1rem", outline: "none", boxSizing: "border-box" }}
             />
           </div>
         </div>
 
-        {/* Status */}
+        {/* Status banner */}
         {status !== "idle" && (
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderRadius: 8, marginBottom: 16,
-            background: status === "ok" ? 'rgba(76,175,80,0.1)' : status === "error" ? 'rgba(255,80,80,0.1)' : 'rgba(240,165,0,0.1)',
-            border: `1px solid ${status === "ok" ? 'rgba(76,175,80,0.3)' : status === "error" ? 'rgba(255,80,80,0.3)' : 'rgba(240,165,0,0.3)'}`,
-            color: status === "ok" ? '#4CAF50' : status === "error" ? '#ff5050' : 'var(--amber)',
+            display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10,
+            background: status === "ok" ? "rgba(76,175,80,0.1)" : status === "error" ? "rgba(255,80,80,0.1)" : "rgba(240,165,0,0.1)",
+            border: `1px solid ${status === "ok" ? "rgba(76,175,80,0.3)" : status === "error" ? "rgba(255,80,80,0.3)" : "rgba(240,165,0,0.3)"}`,
+            color: status === "ok" ? "#4CAF50" : status === "error" ? "#ff6060" : amber,
           }}>
-            {status === "ok" && <CheckCircle size={16} />}
-            {status === "error" && <AlertCircle size={16} />}
-            {status === "gps_wait" && <Navigation size={16} />}
-            {status === "sending" && <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid currentColor', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }} />}
-            <span style={{ fontSize: '0.9rem' }}>
-              {status === "ok" && "Position envoyée !"}
+            {status === "ok" && <CheckCircle size={18} />}
+            {status === "error" && <AlertCircle size={18} />}
+            {(status === "gps_wait" || status === "sending") && (
+              <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid currentColor", borderTopColor: "transparent", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
+            )}
+            <span style={{ fontSize: "0.9rem" }}>
+              {status === "ok" && `✓ Position envoyée à ${lastSent}`}
               {status === "error" && (errorMsg || "Erreur")}
-              {status === "gps_wait" && "Attente du signal GPS..."}
+              {status === "gps_wait" && "Acquisition du GPS en cours..."}
               {status === "sending" && "Envoi en cours..."}
             </span>
           </div>
         )}
 
-        {/* Control buttons */}
+        {/* Main control */}
         {!tracking ? (
           <button
             onClick={startTracking}
-            className="btn btn-amber"
-            style={{ width: '100%', justifyContent: 'center', padding: '16px', fontSize: '1rem', letterSpacing: 2 }}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              width: "100%", padding: "18px", borderRadius: 12, border: "none",
+              background: amber, color: "#1a1a1a", fontWeight: 700, fontSize: "1rem",
+              letterSpacing: 2, cursor: "pointer", fontFamily: "inherit",
+              WebkitTapHighlightColor: "rgba(0,0,0,0)", touchAction: "manipulation",
+            }}
           >
-            <Play size={18} /> DÉMARRER LE SUIVI AUTO
+            <Play size={20} /> DÉMARRER LE SUIVI AUTO
           </button>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {/* Countdown + send now */}
-            <div style={{ display: 'flex', gap: 10 }}>
-              <div className="card" style={{ flex: 1, padding: '12px 16px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.65rem', color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>Prochain envoi</div>
-                <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: '1.8rem', color: 'var(--amber)', lineHeight: 1 }}>
-                  {nextSendIn}s
-                </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {/* Stats */}
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1, background: card, border: `1px solid ${border}`, borderRadius: 12, padding: "14px 16px", textAlign: "center" }}>
+                <div style={{ fontSize: "0.6rem", color: muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Prochain envoi</div>
+                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "2rem", color: amber, lineHeight: 1 }}>{nextSendIn}s</div>
               </div>
-              <div className="card" style={{ flex: 1, padding: '12px 16px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.65rem', color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>Envois effectués</div>
-                <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: '1.8rem', color: 'var(--amber)', lineHeight: 1 }}>
-                  {sendCount}
-                </div>
+              <div style={{ flex: 1, background: card, border: `1px solid ${border}`, borderRadius: 12, padding: "14px 16px", textAlign: "center" }}>
+                <div style={{ fontSize: "0.6rem", color: muted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Envois ok</div>
+                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "2rem", color: "#4CAF50", lineHeight: 1 }}>{sendCount}</div>
               </div>
             </div>
 
-            <button onClick={sendNow} className="btn btn-outline" style={{ justifyContent: 'center', padding: '12px' }}>
-              <Navigation size={16} /> Envoyer maintenant
+            {/* Send now */}
+            <button
+              onClick={sendNow}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                padding: "14px", borderRadius: 10, border: `1px solid ${border}`,
+                background: card, color: sand, fontWeight: 600, fontSize: "0.95rem",
+                cursor: "pointer", fontFamily: "inherit",
+                WebkitTapHighlightColor: "rgba(0,0,0,0)", touchAction: "manipulation",
+              }}
+            >
+              <Send size={16} /> Envoyer maintenant
             </button>
+
+            {/* Stop */}
             <button
               onClick={stopTracking}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: 'rgba(255,80,80,0.1)', border: '1px solid rgba(255,80,80,0.3)', borderRadius: 8, color: '#ff8080', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                padding: "14px", borderRadius: 10, border: "1px solid rgba(255,80,80,0.3)",
+                background: "rgba(255,80,80,0.08)", color: "#ff8080", fontWeight: 600, fontSize: "0.95rem",
+                cursor: "pointer", fontFamily: "inherit",
+                WebkitTapHighlightColor: "rgba(0,0,0,0)", touchAction: "manipulation",
+              }}
             >
               <Square size={16} /> Arrêter le suivi
             </button>
@@ -303,22 +293,22 @@ export default function TrackerPage() {
 
         {/* Last sent */}
         {lastSent && (
-          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', textAlign: 'center', marginTop: 16 }}>
-            Dernier envoi : {lastSent.toLocaleTimeString('fr-FR')}
+          <p style={{ color: muted, fontSize: "0.8rem", textAlign: "center" }}>
+            Dernier envoi réussi : {lastSent}
           </p>
         )}
 
         {/* Info */}
-        <div style={{ marginTop: 32, padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
-          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', lineHeight: 1.7 }}>
-            ℹ️ Gardez cet onglet ouvert et l'écran allumé pour un suivi continu.<br />
-            La position est envoyée automatiquement toutes les <strong style={{ color: 'var(--sand)' }}>60 secondes</strong>.<br />
+        <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, border: `1px solid ${border}`, padding: "14px 16px" }}>
+          <p style={{ color: muted, fontSize: "0.8rem", lineHeight: 1.8, margin: 0 }}>
+            ℹ️ Gardez cet onglet ouvert et l'écran allumé.<br />
+            Position envoyée automatiquement toutes les <strong style={{ color: sand }}>60 secondes</strong>.<br />
             Vos proches voient la mise à jour en temps réel sur le site.
           </p>
         </div>
-
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
