@@ -237,12 +237,14 @@ export default function TrackerPage() {
         {!tracking ? (
           <button
             onClick={startTracking}
+            onTouchEnd={e => { e.preventDefault(); startTracking(); }}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-              width: "100%", padding: "18px", borderRadius: 12, border: "none",
-              background: amber, color: "#1a1a1a", fontWeight: 700, fontSize: "1rem",
+              width: "100%", padding: "20px", borderRadius: 12, border: "none",
+              background: amber, color: "#1a1a1a", fontWeight: 700, fontSize: "1.05rem",
               letterSpacing: 2, cursor: "pointer", fontFamily: "inherit",
-              WebkitTapHighlightColor: "rgba(0,0,0,0)", touchAction: "manipulation",
+              WebkitTapHighlightColor: "rgba(240,165,0,0.3)", touchAction: "manipulation",
+              userSelect: "none", WebkitUserSelect: "none",
             }}
           >
             <Play size={20} /> DÉMARRER LE SUIVI AUTO
